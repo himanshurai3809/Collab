@@ -1,0 +1,6 @@
+@TakeoverYourCoin_HostAddress = http://localhost:5238
+
+GET {{TakeoverYourCoin_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

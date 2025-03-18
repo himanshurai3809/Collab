@@ -1,0 +1,64 @@
+﻿@page "/AddListing"
+@using CollabIndexUI.ApiServices
+@using CollabIndexUI.Models
+@rendermode InteractiveServer
+
+<PageTitle>Create a CTO Project</PageTitle>
+@inject ApiService ApiService
+
+@using System.ComponentModel.DataAnnotations
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="d-flex flex-column justify-center align-center vh-100">
+    <MudPaper Elevation="3" Class="p-4 w-100">
+        <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center" >Create Community Takeover Project</MudText>
+
+        <EditForm Model="newProject">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <!-- Project Name -->
+            <MudTextField Size="Size.ExtraSmall" Class="mb-3" Label="Project Name" Variant="Variant.Outlined" Required="true" 
+                          @bind-Value="newProject.ProjectName" HelperText="This field is required." For="@(() => newProject.ProjectName)" />
+
+
+            <!-- Contract Address -->
+            <MudTextField Size="Size.Small" Class="mb-3" Label="Contract Address" Variant="Variant.Outlined" Required="true"
+                          @bind-Value="newProject.ContractAddress" HelperText="This field is required." For="@(() => newProject.ContractAddress)" />
+
+
+            <!-- Project Description -->
+
+            <MudTextField Size="Size.Small" Class="mb-3" Label="Description" Variant="Variant.Outlined" Required="true"
+                          @bind-Value="newProject.Description" HelperText="This field is required." For="@(() => newProject.Description)" />
+
+
+            <!-- Optional Fields -->
+            <MudTextField Size="Size.Small" Class="mb-3" Label="Twitter" Variant="Variant.Outlined" @bind-Value="newProject.TwitterLink" />
+            <MudTextField Size="Size.Small" Class="mb-3" Label="DexScreener" Variant="Variant.Outlined" @bind-Value="newProject.DexScreenerLink" />
+            <MudTextField Size="Size.Small" Class="mb-3" Label="Telegram " Variant="Variant.Outlined" @bind-Value="newProject.TelegramLink" />
+
+            <!-- Submit Button -->
+            <div class="d-flex justify-center mt-4">
+            <MudButton Type="submit" Color="Color.Secondary" Variant="Variant.Filled" OnClick="@(async () => await HandleValidSubmit())">Create</MudButton>
+            </div>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <MudAlert Severity="Severity.Success" Class="mt-2">@message</MudAlert>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private ListedProject newProject = new();
+    private string? message;
+
+    private async Task HandleValidSubmit()
+    {
+        newProject.CreatedDate = DateTime.UtcNow;
+
+        bool result = await ApiService.CreateProjectAsync(newProject);
+        message = result ? "Project successfully created!" : "Failed to create the project.";
+    }
+}
