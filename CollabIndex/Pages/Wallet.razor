@@ -1,0 +1,29 @@
+﻿@page "/wallet"
+@inject IJSRuntime JS
+
+<h3>Solana Wallet Sign‑In</h3>
+
+@if (PublicKey is null)
+{
+    <button @onclick="Connect">Connect Phantom Wallet</button>
+}
+else
+{
+    <p>Connected: @PublicKey</p>
+    <button @onclick="Disconnect">Disconnect</button>
+}
+
+@code {
+    private string? PublicKey;
+
+    private async Task Connect()
+    {
+        PublicKey = await JS.InvokeAsync<string>("connectWallet");
+    }
+
+    private async Task Disconnect()
+    {
+        await JS.InvokeVoidAsync("disconnectWallet");
+        PublicKey = null;
+    }
+}
