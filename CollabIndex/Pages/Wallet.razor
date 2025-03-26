@@ -6,6 +6,7 @@
 @if (PublicKey is null)
 {
     <button @onclick="Connect">Connect Phantom Wallet</button>
+    <button @onclick="Authenticate" disabled="@(!Connected)">Sign In</button>
 }
 else
 {
@@ -26,4 +27,24 @@ else
         await JS.InvokeVoidAsync("disconnectWallet");
         PublicKey = null;
     }
+      private bool Connected => PublicKey is not null;
+
+    private async Task Authenticate()
+    {
+        /*
+        // Ideally fetch a random challenge from your API
+        var challenge = Guid.NewGuid().ToString();
+        var result = await JS.InvokeAsync<WalletAuthResult>("signInWithWallet", challenge);
+
+        if (result is not null)
+        {
+            // POST to your API for verification
+            var payload = new { result.PublicKey, result.Signature, Challenge = challenge };
+            await Http.PostAsJsonAsync("/api/auth/verify", payload);
+        }
+        */
+    }
 }
+
+
+

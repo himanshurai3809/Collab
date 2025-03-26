@@ -1,0 +1,169 @@
+﻿@page "/createlisting"
+@using CollabIndex.Schema.ListedProjects
+@using CollabIndex.Services
+@inject IApiClient ApiClient
+@inject ILogger<ListedProject> Logger
+
+<PageTitle>Post Listing</PageTitle>
+
+
+<!-- Container to override parent's extra padding -->
+<div class="container mx-auto px-0 py-8">
+    <!-- Centered Card for the Form -->
+    @* <div class="max-w-md mx-auto bg-base-100 p-6 rounded-lg shadow"> *@
+    <center>
+
+        <h1 class="text-xl font-bold mb-6 text-center">📤 Submit a New Project</h1>
+        <div class="mt-4"></div>
+        <EditForm Model="@NewListing" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <!-- Project Name -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Project Name *</span>
+                    <InputText class="input input-lg w-full" @bind-Value="NewListing.ProjectName" />
+
+                </label>
+                <ValidationMessage For="@(() => NewListing.ProjectName)" />
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Description *</span>
+                    <InputTextArea class="textarea textarea-lg w-full h-32" @bind-Value="NewListing.Description" />
+
+                </label>
+                <ValidationMessage For="@(() => NewListing.Description)" />
+            </div>         
+           
+
+            <!-- Category -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Category</span>
+                    <select class="select select-sm" @bind="NewListing.Category">
+                        <option value="">Select Category</option>
+                        <option>DeFi</option>
+                        <option>GameFi</option>
+                        <option>NFT</option>
+                        <option>Infrastructure</option>
+                        <option>Meme/Social</option>
+                    </select>
+                </label>
+            </div>
+
+            <!-- Project Image
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Project Image</span>
+            @* Uncomment below to enable file uploads *@
+            @* <InputFile class="file-input file-input-bordered input-sm" OnChange="OnImageSelected" /> *@
+            @if (!string.IsNullOrEmpty(ImagePreview))
+            {
+            @* <img src="@ImagePreview" class="mt-2 rounded-lg shadow max-h-40 object-contain" /> *@
+            }
+                </label>
+            </div> -->
+            <!-- Twitter Link -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Twitter Link</span>
+                    <InputText class="input input-sm" @bind-Value="NewListing.TwitterLink" />
+                </label>
+            </div>
+
+            <!-- DexScreener Link -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">DexScreener Link</span>
+                    <InputText class="input input-sm" @bind-Value="NewListing.DexScreenerLink" />
+                </label>
+            </div>
+
+            <!-- Telegram Link -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Telegram Link</span>
+                    <InputText class="input input-sm" @bind-Value="NewListing.TelegramLink" />
+                </label>
+            </div>
+
+            <!-- Creator's Twitter Link -->
+            <div class="mb-4">
+                <label class="input">
+                    <span class="label">Creator's Twitter Link</span>
+                    <InputText class="input input-sm" @bind-Value="NewListing.CreatorsTwitterLink" />
+                </label>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-6 text-center">
+                <button type="submit" class="btn btn-primary btn-sm">Create</button>
+            </div>
+        </EditForm>
+    </center>
+</div>
+
+
+@code {
+    private ListingInputModel NewListing = new();
+    private IBrowserFile? UploadedImage;
+    private string? ImagePreview;
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        UploadedImage = e.File;
+        var buffer = new byte[UploadedImage.Size];
+        await UploadedImage.OpenReadStream().ReadAsync(buffer);
+        ImagePreview = $"data:{UploadedImage.ContentType};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task HandleSubmit()
+    {
+        Logger.LogInformation("Submitting listing: {@Listing}", NewListing);
+        Console.WriteLine("Submitting listing...");
+
+        var payload = new
+        {
+            NewListing.ProjectName,
+            NewListing.Description,
+            NewListing.ContractAddress,
+            NewListing.TwitterLink,
+            NewListing.DexScreenerLink,
+            NewListing.TelegramLink,
+            NewListing.CreatorsWalletAddress,
+            NewListing.CreatorsTwitterLink,
+            NewListing.Category,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        var success = await ApiClient.PostAsync("https://api.example.com/projects", payload);
+
+        if (success)
+        {
+            Logger.LogInformation("Project submitted successfully.");
+            // Implement toast or success feedback here
+        }
+        else
+        {
+            Logger.LogError("Project submission failed.");
+            // Implement toast or error feedback here
+        }
+    }
+
+    public class ListingInputModel
+    {
+        public string ProjectName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string ContractAddress { get; set; } = "";
+        public string TwitterLink { get; set; } = "";
+        public string DexScreenerLink { get; set; } = "";
+        public string TelegramLink { get; set; } = "";
+        public string CreatorsWalletAddress { get; set; } = "";
+        public string CreatorsTwitterLink { get; set; } = "";
+        public string Category { get; set; } = "";
+    }
+}

@@ -1,7 +1,201 @@
 ﻿@page "/"
+@using CollabIndex.Schema.ListedProjects
+@using CollabIndex.Services
+@inject IApiClient ApiClient
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="p-4 space-y-6">
+    <h1 class="text-2xl font-bold text-center mb-2">🚀 Project Listings</h1>
 
-Welcome to your new app.
+    <!-- Search Bar -->
+    <div class="flex justify-end">
+        <div class="bg-base-200 p-2 rounded-box w-fit">
+            <div class="join">
+                <input type="text"
+                       class="input input-sm join-item focus:outline-none focus:ring-0 focus:border-base-300"
+                       placeholder="Search by Name/CA"
+                       @bind="SearchTerm" />
+                <button class="btn btn-sm join-item" @onclick="ApplySearch" title="Search">Search</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Wrapper -->
+    <div class="overflow-auto mt-6">
+        <table class="table table-zebra w-full min-w-[1000px] border border-gray-300 border-opacity-20 rounded-md shadow-sm">
+
+            <thead class="bg-base-200 sticky top-0 z-10">
+                <tr>
+                    <th class="p-3 font-bold font-mono">Project</th>
+                    <th class="p-3">Description</th>
+                    <th class="p-3">Contract</th>
+                    <th class="p-3">Links</th>
+                    <th class="p-3">Creator Wallet</th>
+                    <th class="p-3">Creator Twitter</th>
+                    <th class="p-3">Created</th>
+                    <th class="p-3 cursor-pointer select-none" @onclick="ToggleSort">
+                        Votes
+                        <span class="text-xs ml-1 cursor-pointer select-none">@(SortAscending ? "▲" : "▼")</span>
+
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+              
+                @foreach (var item in PagedListings)
+                {
+                    <tr class="hover:bg-base-200 transition-colors duration-150 cursor-pointer"
+                        @onclick="() => ToggleRow(item.Id)">
+               
+                        <td class="p-3 font-bold flex items-center gap-2">
+                            <span>@item.ProjectName</span>
+                            <span class="text-xs">
+                                @(ExpandedRowId == item.Id ? ">>" : "<<")
+                            </span>
+                        </td>
+                        <td class="p-3">@item.Description</td>
+                        <td class="p-3 font-mono text-xs">@Shorten(item.ContractAddress)</td>
+                        <td class="p-3 flex flex-wrap gap-2">
+                            @if (!string.IsNullOrEmpty(item.TwitterLink))
+                            {
+                                <a href="@item.TwitterLink" target="_blank" class="btn btn-ghost btn-xs">🐦</a>
+                            }
+                            @if (!string.IsNullOrEmpty(item.DexScreenerLink))
+                            {
+                                <a href="@item.DexScreenerLink" target="_blank" class="btn btn-ghost btn-xs">📊</a>
+                            }
+                            @if (!string.IsNullOrEmpty(item.TelegramLink))
+                            {
+                                <a href="@item.TelegramLink" target="_blank" class="btn btn-ghost btn-xs">📢</a>
+                            }
+                        </td>
+                        <td class="p-3 font-mono text-xs">@Shorten(item.CreatorsWalletAddress)</td>
+                        <td class="p-3">
+                            @if (!string.IsNullOrEmpty(item.CreatorsTwitterLink))
+                            {
+                                <a href="@item.CreatorsTwitterLink" target="_blank" class="btn btn-ghost btn-xs">👤</a>
+                            }
+                        </td>
+                        <td class="p-3 text-sm">@item.CreatedDate.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                        <td class="p-3">@item.Votes</td>
+                    </tr>
+
+                    @if (ExpandedRowId == item.Id)
+                    {
+                        <tr class="bg-base-100 text-sm">
+                            <td colspan="8" class="p-4 border-t border-base-300">
+                                <div class="space-y-2">
+                                    <div><span class="font-semibold">Full Contract:</span> @item.ContractAddress</div>
+                                    <div><span class="font-semibold">Creator Wallet:</span> @item.CreatorsWalletAddress</div>
+                                    <div><span class="font-semibold">Creator Twitter:</span> <a href="@item.CreatorsTwitterLink" target="_blank">@item.CreatorsTwitterLink</a></div>
+                                    <div><span class="font-semibold">Created On:</span> @item.CreatedDate.ToString("f")</div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+
+
+
+            </tbody>
+        </table>
+        <!-- Pagination-->
+        <div class="flex justify-center mt-4 items-center gap-3">
+            <button class="btn btn-xs btn-outline rounded-full" @onclick="PreviousPage" disabled="@IsFirstPage" title="Previous Page">
+                ◀<!-- Inside button -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+
+            </button>
+
+            <span class="text-xs text-base-content/60">Page @CurrentPage of @TotalPages</span>
+
+            <button class="btn btn-xs btn-outline rounded-full" @onclick="NextPage" disabled="@IsLastPage" title="Next Page">
+                ▶<!-- Right arrow -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+
+            </button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private List<ListedProject> Listings = new();
+    private string SearchTerm = "";
+    private bool SortAscending = true;
+
+
+    // pagination
+    private int CurrentPage = 1;
+    private int PageSize = 5;
+
+    private IEnumerable<ListedProject> PagedListings =>
+        FilteredListings
+            .Skip((CurrentPage - 1) * PageSize)
+            .Take(PageSize);
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredListings.Count() / PageSize);
+
+    private bool IsFirstPage => CurrentPage == 1;
+    private bool IsLastPage => CurrentPage == TotalPages;
+
+    // Expand a project row
+    private int? ExpandedRowId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Listings = await ApiClient.GetAsync<List<ListedProject>>("sample-data/listings.json") ?? new();
+    }
+
+    private void ApplySearch()
+    {
+        CurrentPage = 1;
+        // No-op for now; search is reactive via @bind
+    }
+
+    private void ToggleSort()
+    {
+        CurrentPage = 1;
+        SortAscending = !SortAscending;
+    }
+
+    private IEnumerable<ListedProject> FilteredListings =>
+        Listings
+            .Where(x => string.IsNullOrWhiteSpace(SearchTerm) || x.ProjectName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(x => SortAscending ? x.Votes : -x.Votes);
+
+    private string Shorten(string input)
+    {
+        return string.IsNullOrEmpty(input) || input.Length < 10
+            ? input
+            : $"{input[..6]}...{input[^4..]}";
+    }
+
+
+
+    private void NextPage()
+    {
+        if (!IsLastPage)
+            CurrentPage++;
+    }
+
+    private void PreviousPage()
+    {
+        if (!IsFirstPage)
+            CurrentPage--;
+    }
+
+    private void ToggleRow(int id)
+    {
+        if (ExpandedRowId == id)
+            ExpandedRowId = null; // collapse
+        else
+            ExpandedRowId = id;   // expand
+    }
+
+}

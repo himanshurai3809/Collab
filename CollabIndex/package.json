@@ -1,7 +1,6 @@
 {
   "name": "collabindex",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -13,7 +12,12 @@
     "@solana/wallet-adapter-phantom": "^0.9.25"
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "daisyui": "^5.0.9",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.1",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1"
-  }
+  },
+  "description": ""
 }
